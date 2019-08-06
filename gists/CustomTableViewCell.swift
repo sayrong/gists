@@ -17,6 +17,7 @@ class CustomTableViewCell: UITableViewCell {
     @IBOutlet weak var language: UILabel!
     @IBOutlet weak var secretLabel: UILabel!
     
+    var url: URL?
 
     override func awakeFromNib() {
         super.awakeFromNib()

@@ -7,10 +7,13 @@
 //
 
 import UIKit
+import WebKit
 
 class ViewController: UIViewController {
 
     var model = [Gists]()
+    
+    let token = "2a35aebc7f9356903e58e2e762d176a90e0b96a3"
     
     @IBOutlet weak var table: UITableView!
     
@@ -22,15 +25,14 @@ class ViewController: UIViewController {
         self.table.delegate = self
         self.table.register(UINib(nibName: "CustomTableViewCell", bundle: nil), forCellReuseIdentifier: "custom")
         // Do any additional setup after loading the view.
-        load()
+        loadGistsFromApi(token: token)
     }
     
-    func load() {
-        
+    func loadGistsFromApi(token: String) {
         var components = URLComponents(string: "https://api.github.com/users/sayrong/gists")
         guard let url = components?.url else { return }
         var request = URLRequest(url: url)
-        request.setValue("token 89d23aad6f241da178aa4abb942470ca0ece0b50", forHTTPHeaderField: "Authorization")
+        request.setValue("token \(token)", forHTTPHeaderField: "Authorization")
         
         let task = URLSession.shared.dataTask(with: request) { [weak self] (data, response, error) in
             guard let this = self else { return }
@@ -58,6 +60,15 @@ class ViewController: UIViewController {
         task.resume()
     }
 
+    
+    func convertDate(dateStr: String) -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+        guard let date = dateFormatter.date(from: dateStr) else { return "" }
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        return dateFormatter.string(from: date)
+    }
+    
 }
 
 
@@ -73,19 +84,27 @@ extension ViewController: UITableViewDataSource {
             cell.language.text = lang
         }
         cell.name.text = gist.files.first?.value.filename ?? ""
-        cell.creationDateLabel.text = "Creation date: \(gist.created_at)"
+        cell.creationDateLabel.text = "Creation date: \(convertDate(dateStr: gist.created_at))"
         cell.numberOfCommentsLabel.text = "Number of comments: \(gist.comments)"
         if let url = URL(string: gist.owner.avatar_url) {
             cell.gistImage.load(url: url)
         }
         cell.secretLabel.isHidden = gist.public
+        cell.url = URL(string: gist.files.first?.value.raw_url ?? "")
         return cell
     }
     
 }
 
 extension ViewController: UITableViewDelegate {
-    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        guard let cell = tableView.cellForRow(at: indexPath) as? CustomTableViewCell else { return }
+        if let url = cell.url {
+            let web = webViewController(req: URLRequest(url: url))
+            self.navigationController?.pushViewController(web, animated: true)
+        }
+        tableView.deselectRow(at: indexPath, animated: true)
+    }
 }
 
 
@@ -100,5 +119,37 @@ extension UIImageView {
                 }
             }
         }
+    }
+}
+
+class webViewController: UIViewController {
+    private let webView = WKWebView()
+    var request: URLRequest?
+    
+    convenience init(req: URLRequest) {
+        self.init()
+        request = req
+    }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupViews()
+        if let req = request {
+            webView.load(req)
+        }
+    }
+    
+    
+    private func setupViews() {
+        view.backgroundColor = .white
+        
+        webView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(webView)
+        NSLayoutConstraint.activate([
+            webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            webView.topAnchor.constraint(equalTo: view.topAnchor),
+            webView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            ])
     }
 }
