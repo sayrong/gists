@@ -8,14 +8,14 @@
 
 import Foundation
 
-struct Gists: Decodable {
+struct Gists: Codable {
     //Дата создания
-    let created_at: String
+    let created_at: String?
     //Количество комментариев
-    let comments: Int
+    let comments: Int?
     let files: [String: GistFile]
-    let owner: Owner
-    let `public`: Bool
+    let owner: Owner?
+    let `public`: Bool?
     
     static func parseResponse(data: Data) -> [Gists]? {
         var result = [Gists]()
@@ -29,15 +29,16 @@ struct Gists: Decodable {
     }
 }
 
-struct Owner: Decodable {
+struct Owner: Codable {
     let login: String
     let avatar_url: String
 }
 
-struct GistFile: Decodable {
-    let filename: String
-    let type: String
+struct GistFile: Codable {
+    let filename: String?
+    let type: String?
     let language: String?
-    let raw_url: String
-    let size: Int
+    let raw_url: String?
+    let size: Int?
+    let content: String?
 }

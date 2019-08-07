@@ -13,7 +13,7 @@ class ViewController: UIViewController {
 
     var model = [Gists]()
     
-    let token = "2a35aebc7f9356903e58e2e762d176a90e0b96a3"
+    let token = ""
     
     @IBOutlet weak var table: UITableView!
     
@@ -26,6 +26,7 @@ class ViewController: UIViewController {
         self.table.register(UINib(nibName: "CustomTableViewCell", bundle: nil), forCellReuseIdentifier: "custom")
         // Do any additional setup after loading the view.
         loadGistsFromApi(token: token)
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(testUpload))
     }
     
     func loadGistsFromApi(token: String) {
@@ -69,6 +70,45 @@ class ViewController: UIViewController {
         return dateFormatter.string(from: date)
     }
     
+    @objc func testUpload() {
+        uploadGist(token: token, str: "testing")
+    }
+    
+    func uploadGist(token: String, str: String) {
+        var data: Data
+        
+        let gistFile = GistFile(filename: nil, type: nil, language: nil, raw_url: nil, size: nil, content: str)
+        let gist = Gists(created_at: nil, comments: nil, files: ["testing": gistFile], owner: nil, public: nil)
+        
+        do {
+            data = try JSONEncoder().encode(gist)
+        } catch {
+            print(error.localizedDescription)
+            return
+        }
+        print(String(data: data, encoding: .utf8)!)
+        
+        var components = URLComponents(string: "https://api.github.com/gists")
+        guard let url = components?.url else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("token \(token)", forHTTPHeaderField: "Authorization")
+        request.httpBody = data
+        URLSession.shared.dataTask(with: request) { (data, response, error) in
+            if let response = response as? HTTPURLResponse {
+                switch response.statusCode {
+                case 200..<300:
+                    print("Success")
+                default:
+                    print("Status: \(response.statusCode)")
+                }
+            }
+        }.resume()
+        
+    }
+    
+    
 }
 
 
@@ -84,12 +124,12 @@ extension ViewController: UITableViewDataSource {
             cell.language.text = lang
         }
         cell.name.text = gist.files.first?.value.filename ?? ""
-        cell.creationDateLabel.text = "Creation date: \(convertDate(dateStr: gist.created_at))"
+        cell.creationDateLabel.text = "Creation date: \(convertDate(dateStr: gist.created_at!))"
         cell.numberOfCommentsLabel.text = "Number of comments: \(gist.comments)"
-        if let url = URL(string: gist.owner.avatar_url) {
+        if let url = URL(string: gist.owner!.avatar_url) {
             cell.gistImage.load(url: url)
         }
-        cell.secretLabel.isHidden = gist.public
+        cell.secretLabel.isHidden = gist.public!
         cell.url = URL(string: gist.files.first?.value.raw_url ?? "")
         return cell
     }
